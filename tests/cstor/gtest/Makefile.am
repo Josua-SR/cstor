@@ -29,12 +29,12 @@ test_uzfsserver_LDADD = \
 	$(top_builddir)/lib/libzfs_core/libzfs_core.la
 
 test_uzfsserver_CXXFLAGS = -std=c++11
-test_uzfsserver_LDFLAGS = -pthread -lgtest -lgtest_main ${UZFS_LIB}
+test_uzfsserver_LDFLAGS = -pthread -Wl,-Bstatic -lgtest -lgtest_main -Wl,-Bdynamic ${UZFS_LIB}
 test_uzfs_CXXFLAGS = -std=c++11
-test_uzfs_LDFLAGS = -pthread -lgtest -lgtest_main ${UZFS_LIB}
+test_uzfs_LDFLAGS = -pthread -Wl,-Bstatic -lgtest -lgtest_main -Wl,-Bdynamic ${UZFS_LIB}
 
 #to resolve dependency for zrepl
 #LDFLAGS+= -lzfs
 
-test_zrepl_prot_LDFLAGS = -pthread -lgtest -lgtest_main -ljson-c
-test_zfs_LDFLAGS = -pthread -lgtest -lgtest_main
+test_zrepl_prot_LDFLAGS = -pthread -Wl,-Bstatic -lgtest -lgtest_main -Wl,-Bdynamic -ljson-c
+test_zfs_LDFLAGS = -pthread -Wl,-Bstatic -lgtest -lgtest_main -Wl,-Bdynamic

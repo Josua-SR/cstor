@@ -1,0 +1,176 @@
+---
+kind: pipeline
+name: linux-amd64
+
+clone:
+  depth: 1
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+  - name: cstor
+    image: openebs/cstor-ubuntu:xenial-20190515
+    commands:
+      - apt-get update
+      - apt-get -y install autoconf build-essential libaio-dev libblkid-dev  	libgtest-dev libjemalloc-dev libjson-c-dev libtool uuid-dev wget zlib1g-dev
+      - wget -O libcstor-1.7.0.tar.gz https://github.com/openebs/libcstor/archive/1.7.0.tar.gz
+      - tar -xf libcstor-1.7.0.tar.gz
+      - cd libcstor-1.7.0
+      - sh autogen.sh
+      - ./configure --with-zfs-headers=$PWD/../include --with-spl-headers=$PWD/../lib/libspl/include
+      - make -j4
+      - make install
+      - ldconfig
+      - cd ..
+      - sh autogen.sh
+      - ./configure --enable-uzfs=yes --with-config=user --with-jemalloc --with-libcstor=$PWD/libcstor-1.7.0/include
+      - make clean
+      - make
+      - mkdir -p ./docker/zfs/bin ./docker/zfs/lib
+      - cp cmd/zrepl/.libs/zrepl ./docker/zfs/bin
+      - cp cmd/zpool/.libs/zpool ./docker/zfs/bin
+      - cp cmd/zfs/.libs/zfs ./docker/zfs/bin
+      - cp cmd/zstreamdump/.libs/zstreamdump ./docker/zfs/bin
+      - cp lib/libzpool/.libs/*.so* ./docker/zfs/lib
+      - cp lib/libuutil/.libs/*.so* ./docker/zfs/lib
+      - cp lib/libnvpair/.libs/*.so* ./docker/zfs/lib
+      - cp lib/libzfs/.libs/*.so* ./docker/zfs/lib
+      - cp lib/libzfs_core/.libs/*.so* ./docker/zfs/lib
+      - cp ./libcstor-1.7.0/src/.libs/*.so* ./docker/zfs/lib
+
+  - name: base-image-base
+    image: plugins/docker
+    settings:
+      dockerfile: docker/Dockerfile.base
+      context: docker
+      registry: quay.io
+      repo: quay.io/josua-sr/cstor-base-base
+      tag: 1.7.0-amd64
+      username:
+        from_secret: quay_username
+      password:
+        from_secret: quay_password
+
+  - name: base-image
+    image: plugins/docker
+    settings:
+      dockerfile: docker/Dockerfile
+      context: docker
+      registry: quay.io
+      repo: quay.io/josua-sr/cstor-base
+      tag: 1.7.0-amd64
+      username:
+        from_secret: quay_username
+      password:
+        from_secret: quay_password
+
+---
+kind: pipeline
+name: linux-arm64
+
+clone:
+  depth: 1
+
+platform:
+  os: linux
+  arch: arm64
+
+steps:
+  - name: cstor
+    image: arm64v8/ubuntu:18.04
+    commands:
+      - apt-get update
+      - apt-get -y install autoconf build-essential libaio-dev libblkid-dev  	libgtest-dev libjemalloc-dev libjson-c-dev libtool uuid-dev wget zlib1g-dev
+      - wget -O libcstor-1.7.0.tar.gz https://github.com/openebs/libcstor/archive/1.7.0.tar.gz
+      - tar -xf libcstor-1.7.0.tar.gz
+      - cd libcstor-1.7.0
+      - sh autogen.sh
+      - ./configure --with-zfs-headers=$PWD/../include --with-spl-headers=$PWD/../lib/libspl/include
+      - make -j4
+      - make install
+      - ldconfig
+      - cd ..
+      - sh autogen.sh
+      - ./configure --enable-uzfs=yes --with-config=user --with-jemalloc --with-libcstor=$PWD/libcstor-1.7.0/include
+      - make clean
+      - make
+      - mkdir -p ./docker/zfs/bin ./docker/zfs/lib
+      - cp cmd/zrepl/.libs/zrepl ./docker/zfs/bin
+      - cp cmd/zpool/.libs/zpool ./docker/zfs/bin
+      - cp cmd/zfs/.libs/zfs ./docker/zfs/bin
+      - cp cmd/zstreamdump/.libs/zstreamdump ./docker/zfs/bin
+      - cp lib/libzpool/.libs/*.so* ./docker/zfs/lib
+      - cp lib/libuutil/.libs/*.so* ./docker/zfs/lib
+      - cp lib/libnvpair/.libs/*.so* ./docker/zfs/lib
+      - cp lib/libzfs/.libs/*.so* ./docker/zfs/lib
+      - cp lib/libzfs_core/.libs/*.so* ./docker/zfs/lib
+      - cp ./libcstor-1.7.0/src/.libs/*.so* ./docker/zfs/lib
+
+  - name: base-image-base
+    image: plugins/docker
+    settings:
+      dockerfile: docker/Dockerfile.base.arm64
+      context: docker
+      registry: quay.io
+      repo: quay.io/josua-sr/cstor-base-base
+      tag: 1.7.0-arm64
+      username:
+        from_secret: quay_username
+      password:
+        from_secret: quay_password
+
+  - name: base-image
+    image: plugins/docker
+    settings:
+      dockerfile: docker/Dockerfile.arm64
+      context: docker
+      registry: quay.io
+      repo: quay.io/josua-sr/cstor-base
+      tag: 1.7.0-arm64
+      username:
+        from_secret: quay_username
+      password:
+        from_secret: quay_password
+
+---
+kind: pipeline
+name: manifest
+
+clone:
+  depth: 1
+
+platform:
+  os: linux
+
+steps:
+  - name: base-image-base
+    image: plugins/manifest
+    settings:
+      target: quay.io/josua-sr/cstor-base-base:1.7.0
+      template: quay.io/josua-sr/cstor-base-base:1.7.0-ARCH
+      platforms:
+        - linux/amd64
+        - linux/arm64
+      username:
+        from_secret: quay_username
+      password:
+        from_secret: quay_password
+
+  - name: base-image
+    image: plugins/manifest
+    settings:
+      target: quay.io/josua-sr/cstor-base:1.7.0
+      template: quay.io/josua-sr/cstor-base:1.7.0-ARCH
+      platforms:
+        - linux/amd64
+        - linux/arm64
+      username:
+        from_secret: quay_username
+      password:
+        from_secret: quay_password
+
+depends_on:
+- linux-amd64
+- linux-arm64
